@@ -1,0 +1,9 @@
+[project]
+name = "returns-agent"
+version = "0.1.0"
+description = "Returns and refunds support agent for an invented mattress store. Personal project."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

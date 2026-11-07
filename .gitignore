@@ -1,0 +1,26 @@
+# Secrets: never commit keys
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Generated data (rebuild with: python data/seed_db.py)
+data/*.db
+data/*.sqlite
+data/index/
+
+# Eval output
+evals/results/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
