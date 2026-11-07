@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Returns Agent Tester</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #657085; --line: #e2e6ec;
+    --accent: #2f5bd3; --ok: #1f8a4c; --ok-bg: #e5f5ec; --bad: #c0392b; --bad-bg: #fbe9e7;
+    --warn: #a86400; --warn-bg: #fff3dc; --chip: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #98a2b3; --line: #2c3340;
+      --accent: #7c9cff; --ok: #4cc884; --ok-bg: #173325; --bad: #ff7b6b; --bad-bg: #3a1d1a;
+      --warn: #f0b04d; --warn-bg: #3a2c12; --chip: #262d39;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--card); display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; }
+  header small { color: var(--muted); }
+  .tabs { display: flex; gap: 6px; margin-left: auto; }
+  .tabs button { border: 1px solid var(--line); background: transparent; color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+  .tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  main { padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+  .layout { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } main { padding: 12px 16px; } }
+  .layout > * { min-width: 0; }  /* long dropdown options must not widen the column */
+  select { max-width: 100%; text-overflow: ellipsis; }
+  td { overflow-wrap: anywhere; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 170px; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-weight: 600; background: var(--accent); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ok { background: var(--ok); } .btn.bad { background: var(--bad); }
+  .chip { display: inline-block; padding: 2px 9px; border-radius: 99px; background: var(--chip); font-size: 12px; margin: 2px 4px 2px 0; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.bad { background: var(--bad-bg); color: var(--bad); } .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 4px 10px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .muted { color: var(--muted); }
+  .reply { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .guardrail { background: var(--warn-bg); color: var(--warn); padding: 6px 10px; border-radius: 6px; }
+  .compare { display: grid; grid-template-columns: 110px 1fr 1fr 40px; gap: 4px 10px; align-items: center; }
+  .compare .h { color: var(--muted); font-size: 12px; }
+  .clause { border-left: 3px solid var(--accent); padding: 2px 10px; margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .error { background: var(--bad-bg); color: var(--bad); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .spinner { color: var(--muted); padding: 30px; text-align: center; }
+  .hidden { display: none; }
+  .score { font-size: 26px; font-weight: 700; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Returns Agent Tester</h1><small>Dunelight Mattress Co. (fictional) · fake payments only</small></div>
+  <nav class="tabs">
+    <button id="tab-test" class="active">Test an email</button>
+    <button id="tab-eval">Eval results</button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-test" class="layout">
+    <div>
+      <div class="card">
+        <h2>Email</h2>
+        <label for="pick">Load a labelled test email (optional)</label>
+        <select id="pick"><option value="">— write your own —</option></select>
+        <label for="sender">From</label>
+        <input id="sender" value="sara.mansoori@example.com">
+        <label for="subject">Subject</label>
+        <input id="subject" value="Customer email">
+        <label for="body">Body (English, Arabic or mixed)</label>
+        <textarea id="body" dir="auto" placeholder="Paste the customer email here..."></textarea>
+        <label for="attach">Attachments (comma separated file names, e.g. photo1.jpg)</label>
+        <input id="attach" placeholder="none">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="run">Run agent</button>
+          <span class="muted" id="hint">~3,300 tokens per run. Groq free: 8,000 tokens/minute.</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Customers in the database</h2>
+        <p class="muted" style="margin:0 0 8px; font-size:13px">
+          Press <b>Use</b> to send as that customer about that order. Any other address
+          is treated as a stranger (no order details, no refunds).
+        </p>
+        <input id="custfilter" placeholder="Filter: name, order, product, note…" style="margin-bottom:8px">
+        <div style="max-height:380px; overflow:auto">
+          <table id="customers" style="font-size:13px"></table>
+        </div>
+      </div>
+    </div>
+    <div id="out"><div class="card muted">Load or paste an email, then press <b>Run agent</b>.</div></div>
+  </section>
+
+  <section id="view-eval" class="hidden">
+    <div class="card row">
+      <label for="evalpick" style="margin:0">Eval run</label>
+      <select id="evalpick" style="max-width:260px"></select>
+    </div>
+    <div id="evalout"></div>
+  </section>
+</main>
+
+<script>
+// All text from emails and the LLM is shown with textContent / esc(): never as HTML.
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let testEmails = [], loadedId = null;
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : res.statusText);
+  return data;
+}
+
+// ---------- tabs ----------
+function showTab(name) {
+  $("view-test").classList.toggle("hidden", name !== "test");
+  $("view-eval").classList.toggle("hidden", name !== "eval");
+  $("tab-test").classList.toggle("active", name === "test");
+  $("tab-eval").classList.toggle("active", name === "eval");
+  if (name === "eval") loadEvalList();
+}
+$("tab-test").onclick = () => showTab("test");
+$("tab-eval").onclick = () => showTab("eval");
+
+// ---------- form ----------
+async function init() {
+  testEmails = await api("/api/test-emails");
+  for (const e of testEmails) {
+    const o = document.createElement("option");
+    o.value = e.id;
+    o.textContent = `${e.id} · ${e.expected.category} → ${e.expected.action} · ${e.subject}`;
+    $("pick").appendChild(o);
+  }
+  customers = await api("/api/customers");
+  renderCustomers();
+}
+
+let customers = [];
+function renderCustomers() {
+  const q = $("custfilter").value.trim().toLowerCase();
+  const rows = customers.filter((c) => !q || JSON.stringify(c).toLowerCase().includes(q));
+  $("customers").innerHTML = `<tr><th>Customer</th><th>Order</th><th>Nights</th><th></th></tr>` +
+    rows.map((c, i) => `<tr title="${esc(c.note)}">
+      <td>${esc(c.name)}<br><span class="muted">${esc(c.email)}</span></td>
+      <td>${esc(c.order_id)} · ${esc(c.product)}<br><span class="muted">AED ${esc(c.amount_aed)} · ${esc(c.status)} · ${esc(c.note)}</span></td>
+      <td>${esc(c.nights_since_delivery ?? "—")}</td>
+      <td><button class="btn" data-i="${customers.indexOf(c)}" style="padding:4px 10px">Use</button></td></tr>`).join("");
+  $("customers").querySelectorAll("button[data-i]").forEach((b) => b.onclick = () => useCustomer(customers[+b.dataset.i]));
+}
+$("custfilter").addEventListener("input", renderCustomers);
+
+function useCustomer(c) {
+  $("pick").value = ""; loadedId = null;
+  $("sender").value = c.email;
+  $("attach").value = "";
+  if (!$("body").value.trim() || /^Order DL-\d{4}\.\s*$/.test($("body").value.trim())) {
+    $("body").value = `Order ${c.order_id}. `;
+  }
+  $("body").focus();
+}
+$("pick").onchange = () => {
+  const e = testEmails.find((x) => x.id === $("pick").value);
+  loadedId = e ? e.id : null;
+  if (!e) return;
+  $("sender").value = e.from; $("subject").value = e.subject; $("body").value = e.body;
+  $("attach").value = e.attachments.join(", ");
+};
+for (const id of ["sender", "subject", "body", "attach"]) {
+  $(id).addEventListener("input", () => { loadedId = null; $("pick").value = ""; });  // edited = your own email
+}
+
+$("run").onclick = async () => {
+  const payload = loadedId ? {email_id: loadedId} : {
+    sender: $("sender").value, subject: $("subject").value, body: $("body").value,
+    attachments: $("attach").value.split(",").map((s) => s.trim()).filter(Boolean),
+  };
+  await runAndRender(() => api("/api/runs", payload));
+};
+
+async function runAndRender(call) {
+  $("run").disabled = true;
+  $("out").innerHTML = '<div class="card spinner">Agent is working… (3 LLM calls, a few seconds)</div>';
+  try { render(await call()); }
+  catch (err) { $("out").innerHTML = `<div class="error">Error: ${esc(err.message)}</div>`; }
+  finally { $("run").disabled = false; }
+}
+
+// ---------- result rendering ----------
+const chip = (text, kind = "") => `<span class="chip ${kind}">${esc(text)}</span>`;
+
+function render(r) {
+  const c = r.classification || {}, o = r.order || {}, d = r.decision || {};
+  const needsHuman = r.status === "waiting_for_approval" || r.status === "escalated";
+  let h = "";
+
+  if (r.expected) {
+    const rows = [
+      ["category", r.expected.category, c.category],
+      ["action", r.expected.action, d.action],
+      ["needs human", String(r.expected.needs_human), String(needsHuman)],
+      ["suspicious", String(r.expected.suspicious), String(!!c.suspicious)],
+    ];
+    h += `<div class="card"><h2>Label vs agent (${esc(r.email.id)})</h2><div class="compare">
+      <div class="h"></div><div class="h">Expected</div><div class="h">Agent</div><div></div>
+      ${rows.map(([k, e, g]) => `<div class="muted">${k}</div><div>${esc(e)}</div><div>${esc(g)}</div><div>${e === g ? chip("✓", "ok") : chip("✗", "bad")}</div>`).join("")}
+    </div><p class="muted" style="margin:8px 0 0">Label reason: ${esc(r.email.why)}</p></div>`;
+  }
+
+  h += `<div class="card"><h2>1 · Classify (LLM)</h2>
+    ${chip(c.category)} ${chip("language: " + c.language)} ${chip("order: " + (c.order_id || "none"))}
+    ${c.suspicious ? chip("SUSPICIOUS", "bad") : chip("not suspicious", "ok")}
+    ${c.suspicious_reason ? `<p class="muted">${esc(c.suspicious_reason)}</p>` : ""}
+    <p style="margin:8px 0 0">${esc(c.summary)}</p></div>`;
+
+  h += `<div class="card"><h2>2 · Facts (lookup_order)</h2>`;
+  if (!o.found) {
+    h += `<p>${chip("order not found", "warn")} ${esc(o.reason)}</p>`;
+  } else {
+    h += `<div class="kv">
+      <div>Order</div><div>${esc(o.order_id)} · ${esc(o.product)} · AED ${esc(o.amount_aed)}</div>
+      <div>Customer</div><div>${esc(o.customer_name)} ${o.sender_matches_owner ? chip("sender owns order", "ok") : chip("sender is NOT the owner", "bad")}</div>
+      <div>Status</div><div>${esc(o.status)}, delivered ${esc(o.delivered_at || "not yet")}</div>
+      <div>Nights since delivery</div><div><b>${esc(o.nights_since_delivery ?? "—")}</b></div>
+      <div>Payments</div><div>${o.payments.map((p) => `${esc(p.payment_id)}: AED ${esc(p.amount_aed)} card *${esc(p.card_last4)} ${esc(p.status)} (refundable ${esc(p.refundable_aed)})`).join("<br>")}</div>
+      <div>Returns</div><div>${o.returns.length ? o.returns.map((x) => `${esc(x.return_id)}: ${esc(x.status)}${x.business_days_since_refund != null ? `, refund ${esc(x.business_days_since_refund)} business days ago` : ""}`).join("<br>") : "none"}</div>
+    </div>`;
+  }
+  h += `</div>`;
+
+  h += `<div class="card"><h2>3 · Policy (check_policy, top 4 clauses)</h2>
+    ${(r.policy || []).map((p) => `<div class="clause"><b>${esc(p.clause)}</b> <span class="muted">${esc(p.section)} · score ${esc(p.score)}</span><br>${esc(p.text)}</div>`).join("")}</div>`;
+
+  const guard = (d.reason || "").startsWith("[guardrail]");
+  h += `<div class="card"><h2>4 · Decide (LLM + code guardrails)</h2>
+    ${chip(d.action, d.action === "escalate" ? "warn" : d.action === "prepare_refund" ? "ok" : "")} ${d.urgent ? chip("URGENT", "bad") : ""}
+    <p class="${guard ? "guardrail" : ""}">${esc(d.reason)}</p>
+    ${d.refund_payment_id ? `<p class="muted">Refund: ${esc(d.refund_payment_id)} · AED ${esc(d.refund_amount_aed)}</p>` : ""}</div>`;
+
+  if (r.approval_request) {
+    const a = r.approval_request, p = a.proposal;
+    h += `<div class="card" style="border-color:var(--warn)"><h2>5 · Waiting for team lead approval</h2>
+      <p>Refund <b>AED ${esc(p.amount_aed)}</b> for ${esc(p.order_id)} to the original card <b>*${esc(p.card_last4)}</b></p>
+      <p class="muted">Customer ${esc(a.customer_name)} · ${esc(a.category)} · clauses ${esc((a.policy_clauses || []).join(", "))}</p>
+      <div class="row"><button class="btn ok" id="approve">Approve refund</button><button class="btn bad" id="reject">Reject</button></div></div>`;
+  } else if (r.approval) {
+    h += `<div class="card"><h2>5 · Approval</h2>${r.approval.approved ? chip("approved", "ok") : chip("rejected", "bad")} by ${esc(r.approval.by)}</div>`;
+  }
+
+  const statusKind = {done: "ok", escalated: "warn", waiting_for_approval: "warn"}[r.status] || "";
+  h += `<div class="card"><h2>Result</h2>
+    ${chip(r.status, statusKind)}
+    ${r.refund ? chip(`REFUND ${r.refund.refund_id}: AED ${r.refund.amount_aed} → card *${r.refund.card_last4}`, "ok") : ""}
+    ${r.error ? `<p class="muted">Note: ${esc(r.error)}</p>` : ""}
+    <p class="muted" style="margin-bottom:0">Tools: ${(r.tools_called || []).map((t) => chip(t)).join("")}
+    · LLM calls ${esc(r.usage.calls)} · tokens ${esc(r.usage.tokens)}</p></div>`;
+
+  h += `<div class="card"><h2>Reply to customer</h2>${r.reply ? `<div class="reply" dir="auto">${esc(r.reply)}</div>` : `<p class="muted">${r.status === "waiting_for_approval" ? "Sent after the approval decision." : "No reply (suspicious emails get no reply)."}</p>`}</div>`;
+
+  $("out").innerHTML = h;
+  if (r.approval_request) {
+    $("approve").onclick = () => runAndRender(() => api(`/api/runs/${r.run_id}/approval`, {approved: true}));
+    $("reject").onclick = () => runAndRender(() => api(`/api/runs/${r.run_id}/approval`, {approved: false}));
+  }
+}
+
+// ---------- eval tab ----------
+async function loadEvalList() {
+  const runs = await api("/api/eval");
+  const sel = $("evalpick");
+  if (!runs.length) { $("evalout").innerHTML = '<div class="card muted">No eval runs yet. Run: python evals/run_eval.py</div>'; return; }
+  const current = sel.value;
+  sel.innerHTML = runs.map((n) => `<option>${esc(n)}</option>`).join("");
+  sel.value = runs.includes(current) ? current : runs[runs.length - 1];
+  sel.onchange = () => loadEval(sel.value);
+  loadEval(sel.value);
+}
+
+async function loadEval(name) {
+  try {
+    const s = await api(`/api/eval/${encodeURIComponent(name)}`);
+    const pct = (v) => `${Math.round(v * 100)}%`;
+    let h = `<div class="card"><h2>${esc(s.name)} · ${esc(s.models.join(", "))} · ${esc(s.tokens.toLocaleString())} tokens</h2>
+      <div class="grid4">
+        <div><div class="score">${s.all_checks_ok}/${s.n}</div><div class="muted">all checks passed</div></div>
+        <div><div class="score">${pct(s.accuracy.action)}</div><div class="muted">action accuracy (baseline ${pct(s.baseline_always_escalate)})</div></div>
+        <div><div class="score">${pct(s.accuracy.category)}</div><div class="muted">category accuracy</div></div>
+        <div><div class="score" style="color:${s.unsafe_refunds.length ? "var(--bad)" : "var(--ok)"}">${s.unsafe_refunds.length}</div><div class="muted">unsafe refunds ${esc(s.unsafe_refunds.join(", "))}</div></div>
+      </div></div>`;
+    h += `<div class="card"><h2>Checks</h2><table><tr><th>Check</th><th>Accuracy</th></tr>
+      ${Object.entries(s.accuracy).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${pct(v)}</td></tr>`).join("")}</table></div>`;
+    h += `<div class="card"><h2>Category accuracy</h2><table><tr><th>Category</th><th>Correct</th></tr>
+      ${Object.entries(s.category_accuracy).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</table></div>`;
+    h += `<div class="card"><h2>Failures (${s.failures.length})</h2><table>
+      <tr><th>Email</th><th>Failed checks</th><th>Expected</th><th>Agent</th><th></th></tr>
+      ${s.failures.map((f) => `<tr><td>${esc(f.id)}</td><td>${Object.entries(f.checks).filter(([, ok]) => !ok).map(([k]) => chip(k, "bad")).join("")}</td>
+        <td>${esc(f.expected.category)} / ${esc(f.expected.action)}</td>
+        <td>${f.errored ? esc(f.got.error) : `${esc(f.got.category)} / ${esc(f.got.action)}`}</td>
+        <td><button class="btn" data-id="${esc(f.id)}" style="padding:4px 10px">Open</button></td></tr>`).join("")}</table></div>`;
+    $("evalout").innerHTML = h;
+    $("evalout").querySelectorAll("button[data-id]").forEach((b) => b.onclick = () => {
+      showTab("test"); $("pick").value = b.dataset.id; $("pick").onchange();
+    });
+  } catch (err) {
+    $("evalout").innerHTML = `<div class="error">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+init().catch((err) => { $("out").innerHTML = `<div class="error">Could not reach the API: ${esc(err.message)}</div>`; });
+</script>
+</body>
+</html>

@@ -24,3 +24,6 @@ evals/results/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local Claude Code settings
+.claude/

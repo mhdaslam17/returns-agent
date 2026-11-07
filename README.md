@@ -30,6 +30,22 @@ python data/seed_db.py      # builds data/orders.db
 pytest
 ```
 
+## Try it in the browser
+
+```bash
+.venv\Scripts\python.exe -m uvicorn returns_agent.api:app --app-dir src --port 8000
+```
+
+Open http://localhost:8000 (the first start takes about 20 seconds to load the
+embedding model). Paste an email, or load one of the 62 test emails, and press
+**Run agent**. The page shows each step: classification, order facts, policy
+clauses, decision (guardrail overrides are highlighted), approval and the reply.
+Refunds above AED 500 wait for **Approve** or **Reject**. The **Eval results** tab
+shows the scores and failures of each eval run.
+
+API: `POST /api/runs`, `POST /api/runs/{id}/approval`, `GET /api/test-emails`,
+`GET /api/eval/{name}`. Interactive docs: http://localhost:8000/docs
+
 ## Project layout
 
 ```
@@ -38,7 +54,9 @@ data/seed_db.py         builds the fake order database
 evals/emails.json       labelled test emails
 evals/run_eval.py       runs the agent on all emails and scores it
 src/returns_agent/      agent code (see docs/AGENT_GUIDE.md)
+src/returns_agent/api.py      FastAPI backend; static/index.html is the test page
 scripts/check_llm.py    checks your LLM settings
+scripts/try_email.py    runs one email in the terminal, step by step
 tests/                  pytest tests
 docs/                   plan and guides
 ```
